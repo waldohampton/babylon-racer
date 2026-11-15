@@ -27,10 +27,13 @@ const scene = new Scene(engine);
 scene.clearColor = new Color4(0.1, 0.12, 0.15, 1);
 
 // Hero camera. Fixed framing so every part is judged in the same shot.
-const camera = new UniversalCamera("hero", new Vector3(6.2, 1.15, -7.4), scene);
+// Position is the three-quarter front-left viewpoint; setTarget is REQUIRED or
+// a UniversalCamera just looks down +Z and frames empty ground.
+const camera = new UniversalCamera("hero", new Vector3(4.6, 1.1, -5.9), scene);
 camera.minZ = 0.1;
 camera.maxZ = 4000;
 camera.fov = (42 * Math.PI) / 180;
+camera.setTarget(new Vector3(0, 0.85, 0));
 
 const ctx: LabCtx = { scene, engine, camera };
 
@@ -64,6 +67,18 @@ window.addEventListener("resize", () => engine.resize());
   }),
   setFov: (deg: number) => {
     camera.fov = (deg * Math.PI) / 180;
+  },
+  /** harness seam: show only meshes whose name matches, so one surface can be
+   * judged while other agents are rewriting theirs. HERO.isolate("") restores. */
+  isolate: (keep: string) => {
+    const re = new RegExp(keep);
+    const hidden: string[] = [];
+    for (const m of scene.meshes) {
+      const want = keep === "" ? true : re.test(m.name);
+      m.isVisible = want;
+      if (!want) hidden.push(m.name);
+    }
+    return hidden.length;
   },
 };
 (window as any).HERO_READY = true;
