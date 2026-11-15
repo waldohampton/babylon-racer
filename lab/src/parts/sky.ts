@@ -21,7 +21,7 @@ import type { LabCtx } from "../main";
  * reference's luma 75 / warmth -6 with nothing clipped.
  */
 
-const SKY_URL = "/assets/sky/storm_sunset_2k.hdr";
+const SKY_URL = "/assets/sky/storm_blue_2k.hdr";
 
 /** Cube face size for the visible dome. The source panorama is 2048x1024. */
 const CUBE_SIZE = 1024;
@@ -30,7 +30,7 @@ const CUBE_SIZE = 1024;
 const ENV_CUBE_SIZE = 256;
 
 /** Dome brightness. Calibrated against scripts/bands.py, not by eye. */
-const SKY_LEVEL = 0.385;
+const SKY_LEVEL = 0.72;
 
 /** IBL brightness for PBR/standard materials that reflect the sky. */
 const ENV_LEVEL = 0.60;
