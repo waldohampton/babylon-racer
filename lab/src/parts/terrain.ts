@@ -87,7 +87,10 @@ const MACRO_MEAN_DIRT = 0.9505;
  * unit (7.6 km), 91% at the farthest (17 km), ~99.9% at the ground's rim. A
  * linear ramp either hazes the road or leaves the ridge bare; this does not.
  */
-const FOG_DENSITY = 9.2e-5;
+// Measured, not assumed: at 9.2e-5 the 7-17 km ridge rendered at luma 22 — a
+// black silhouette that read as a treeline. A 10x sweep lifted it to 115; this
+// sits between so the mesas land near the plate's 35-55 instead of pure black.
+const FOG_DENSITY = 6.0e-4;
 /**
  * The sky's own horizon band, measured off the frame one row above the horizon
  * ([74,75,65] display, luma ~74). This is NOT the linear value of that colour:
