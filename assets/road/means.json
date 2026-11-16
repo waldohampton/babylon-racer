@@ -1,6 +1,18 @@
 {
- "asphalt_macro": 0.9615,
- "asphalt_detail": 0.5,
- "dirt_macro": 0.9505,
- "dirt_detail": 0.5
+ "asphalt_macro": 0.9620000123977661,
+ "asphalt_albedo": [
+  0.3592,
+  0.3559,
+  0.3438
+ ],
+ "asphalt_rough": 0.8794009685516357,
+ "asphalt_patch": 0.9449995160102844,
+ "dirt_macro": 0.9509997963905334,
+ "dirt_albedo": [
+  0.5092,
+  0.435,
+  0.3836
+ ],
+ "dirt_rough": 0.9227004051208496,
+ "dirt_patch": 0.9399999976158142
 }
