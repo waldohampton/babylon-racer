@@ -31,7 +31,8 @@ const w = Number(arg("w", "1920"));
 const h = Number(arg("h", "1080"));
 const wait = Number(arg("wait", "3000"));
 const isolate = arg("isolate", "");
-const base = `http://localhost:${port}/lab/`;
+const page = arg("page", "lab/");
+const base = `http://localhost:${port}/${page}`;
 const WIN_CHROME = "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe";
 
 mkdirSync(dirname(out), { recursive: true });

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>DAY LAB</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+      #c { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: block; }
+      #err { position: fixed; inset: 0; display: none; padding: 20px; font: 13px/1.5 monospace; color: #ffd7d7; background: #2a1114; white-space: pre-wrap; }
+      #tag { position: fixed; left: 12px; top: 10px; font: 11px/1.4 monospace; color: #9fb; opacity: .55; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+    <div id="tag">day lab</div>
+    <pre id="err"></pre>
+    <script>
+      window.addEventListener("error", (e) => {
+        const el = document.getElementById("err");
+        el.style.display = "block";
+        el.textContent += (e.message || String(e.error)) + "\n";
+      });
+    </script>
+    <script type="module" src="/lab/src/day.ts"></script>
+  </body>
+</html>
