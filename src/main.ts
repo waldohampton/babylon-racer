@@ -126,11 +126,30 @@ installTouchControls(input);
 let simTime = 0;
 let paused = false;
 let acc = 0;
+// above this many physics steps in one frame, the frame is late: better to run
+// slightly slow than to bank a backlog that never drains
+const MAX_STEPS = 8;
+let prevX = 0, prevZ = 0, prevYaw = 0, prevSpin = 0;
+let curX = 0, curZ = 0, curYaw = 0, curSpin = 0;
 
 function fixedStep(dt: number) {
   input.tick(dt);
+  // snapshot before stepping, so the renderer can interpolate between the last
+  // two physics states instead of jumping to the newest one
+  prevX = curX;
+  prevZ = curZ;
+  prevYaw = curYaw;
+  prevSpin = curSpin;
+
   car.step(dt, input.state);
   const s = car.state();
+  curX = s.x;
+  curZ = s.z;
+  curYaw = s.yaw;
+  curSpin = s.wheelSpin;
+
+  // headless tests read the root straight after sim(); the render observer
+  // overwrites this with the interpolated pose every frame
   root.position.set(s.x, s.y, s.z);
   root.rotation.y = s.yaw;
   spinWheels(wheels, s.wheelSpin, s.steer);
@@ -139,28 +158,63 @@ function fixedStep(dt: number) {
   simTime += dt;
 }
 
+/** pose to draw this frame: between the last two physics states */
+function renderPose() {
+  const a = paused ? 1 : Math.min(1, Math.max(0, acc / TUNE.step));
+  let dy = curYaw - prevYaw;
+  while (dy > Math.PI) dy -= Math.PI * 2;
+  while (dy < -Math.PI) dy += Math.PI * 2;
+  const yaw = prevYaw + dy * a;
+  const x = prevX + (curX - prevX) * a;
+  const z = prevZ + (curZ - prevZ) * a;
+  const spin = prevSpin + (curSpin - prevSpin) * a;
+  root.position.set(x, 0, z);
+  root.rotation.y = yaw;
+  spinWheels(wheels, spin, car.state().steer);
+  if (model) model.spin(-spin);
+  return { x, z, yaw };
+}
+
+/** drop the snapshots onto the live car state, for teleports (place/reset) */
+function resyncPose() {
+  const s = car.state();
+  prevX = curX = s.x;
+  prevZ = curZ = s.z;
+  prevYaw = curYaw = s.yaw;
+  prevSpin = curSpin = s.wheelSpin;
+}
+
 function advance(realDt: number) {
   if (paused) return;
   acc += Math.min(realDt, 0.25);
   let n = 0;
-  while (acc >= TUNE.step && n++ < 5) {
+  while (acc >= TUNE.step && n < MAX_STEPS) {
     fixedStep(TUNE.step);
     acc -= TUNE.step;
+    n++;
   }
+  // A device that cannot keep up would otherwise bank the backlog forever: the
+  // accumulator grows, alpha pins at 1, interpolation does nothing, and the car
+  // runs in permanent slow motion. Drop the excess and let it be slow instead.
+  if (acc >= TUNE.step) acc = 0;
 }
 
 const hudSpeed = document.getElementById("spd") as HTMLElement;
 const hudGear = document.getElementById("gear") as HTMLElement;
 
 scene.onBeforeRenderObservable.add(() => {
-  advance(engine.getDeltaTime() / 1000);
+  const dt = engine.getDeltaTime() / 1000;
+  advance(dt);
   const s = car.state();
+  // draw between the last two physics states; without this the body jumps a
+  // whole step per frame at whatever rate the display runs, which is the judder
+  const pose = renderPose();
   const kmh = Math.round(Math.abs(s.forwardSpeed) * 3.6);
   hudSpeed.textContent = String(kmh);
   hudGear.textContent = s.forwardSpeed < -0.3 ? "R" : kmh < 1 ? "N" : "D";
-  cam.update(s, root, engine.getDeltaTime() / 1000);
+  cam.update({ ...s, x: pose.x, z: pose.z, yaw: pose.yaw }, root, dt);
   // keep the 70 m shadow box on the car
-  sun.position.copyFromFloats(s.x + SUN_FRAME_OFFSET.x, s.y + SUN_FRAME_OFFSET.y, s.z + SUN_FRAME_OFFSET.z);
+  sun.position.copyFromFloats(pose.x + SUN_FRAME_OFFSET.x, SUN_FRAME_OFFSET.y, pose.z + SUN_FRAME_OFFSET.z);
 });
 
 // Warm-up frames: the first render after the sky prefilter and the PBR shader
@@ -191,4 +245,4 @@ engine.runRenderLoop(() => {
 });
 window.addEventListener("resize", () => engine.resize());
 
-installHook({ engine, scene, car, root, cam, input, fixedStep, setPaused: (p: boolean) => { paused = p; } });
+installHook({ engine, scene, car, root, cam, input, fixedStep, setPaused: (p: boolean) => { paused = p; }, resync: resyncPose });

@@ -15,6 +15,8 @@ interface Deps {
   input: Input;
   fixedStep: (dt: number) => void;
   setPaused: (p: boolean) => void;
+  /** optional: drop the render interpolation onto the new pose after a teleport */
+  resync?: () => void;
 }
 
 /**
@@ -35,6 +37,7 @@ export function installHook(d: Deps) {
     place: (x: number, z: number, yaw = 0) => {
       d.car.place(x, z, yaw);
       d.cam.look(yaw);
+      d.resync?.();
       const s = d.car.state();
       d.root.position.set(s.x, s.y, s.z);
       d.root.rotation.y = s.yaw;

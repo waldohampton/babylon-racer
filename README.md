@@ -83,6 +83,17 @@ Not measured: real phone frame rate. The only renderer available here is a
 software rasterizer, so the tier was sized by texture and buffer budgets, not by
 an fps reading on a device.
 
+## Frame loop
+
+Physics runs at a fixed 60 Hz behind an accumulator. The drawn pose is
+interpolated between the last two physics states using the accumulator
+remainder. Without that, the body advances in whole steps (0.5 m per step at
+100 km/h) while the chase camera smooths continuously, and the mismatch reads as
+the car vibrating in the frame. Above 8 steps in one frame the backlog is
+dropped instead of banked: a growing accumulator pins the interpolation factor
+at 1, which silently disables the interpolation and puts the game in permanent
+slow motion.
+
 ## Measured, not estimated
 
 | test | result |
