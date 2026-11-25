@@ -14,24 +14,58 @@ Keys: W/S throttle and brake, A/D steer, Space handbrake, R reset (reset not wir
 
 ## What exists
 
-- M0 scene: engine, flat ground, 12 reference blocks, hemispheric + directional light.
+- M0 scene: engine, scanned sand ground, 12 concrete reference blocks, photographed
+  sky, one sun with a real shadow.
 - M1 vehicle: kinematic bicycle model with a grip-limited yaw rate, wheel spin driven by
   signed forward travel, front-wheel steer.
 - Chase camera: spring arm, look-at 3 m ahead, lens opens 46 -> 53 degrees with speed.
   No ray pull-in yet (nothing to pull in against on a flat plane).
 - HUD: km/h and gear letter.
-- Test hook: `window.RACER`.
+- Test hook: `window.RACER` (also exposes `RACER.scene()` and `RACER.engine()`).
+
+## Look layer (`src/render/look.ts`)
+
+Every surface is a real asset with a measured size, not a colour picked by eye.
+
+| surface | asset | real size | tiling |
+|---|---|---|---|
+| ground | Poly Haven `aerial_sand` (CC0) | 150 m scan, 4k albedo / 2k normal / 1k ARM | 600 m plane = 4 repeats |
+| blocks | Poly Haven `brushed_concrete` (CC0) | 2.5 m scan, 1k | 6 m box = 2.4 repeats |
+| sky + IBL | Poly Haven `kloofendal_43d_clear_puresky` (CC0) | 1k HDR | prefiltered at load |
+| car body | Grabd3D "Muscle Car" (CC0), 19,806 tris | 4.68 x 1.92 x 1.39 m | stock atlas, paint remapped to black |
+
+- PBR throughout: albedo, normal and an ARM map (R = AO, G = roughness, B = metallic), so
+  roughness and occlusion are photographed rather than guessed.
+- The HDRI is both the skybox and the light probe. There is no hemispheric cheat light; the
+  ambient comes from the photograph, which is why black paint has shape.
+- One sun with a 2048 blurred-ESM shadow map. The frustum is pinned to a 70 m box that
+  follows the car, because with auto-fitted bounds the blocks at 60 m put the car's shadow
+  on about four texels.
+- ACES tonemapping at exposure 1.0, light vignette, and EXP2 fog at 0.0024 so the 600 m
+  plane has no visible edge.
+- The stock car atlas is butter yellow with racing stripes. `assets/car/body_basecolor_black.jpg`
+  remaps the paint islands to black while keeping the baked panel shading, and the body
+  material carries a clear coat so a black car still reads.
+
+Total added: 11 MB of textures plus a 1.2 MB HDR, all CC0.
 
 ## Measured, not estimated
 
 | test | result |
 |---|---|
-| 0-100 km/h | 4.35 s |
-| top speed, 10 s flat out | 141 km/h |
-| yaw rate at 145 km/h, full lock | 17 deg/s (grip capped at 12 m/s^2) |
-| yaw rate at 40 km/h, full lock | 61 deg/s |
+| 0-100 km/h | 4.17 s |
+| top speed, 10 s flat out | 145 km/h |
+| corner radius at 30 km/h, full lock | 3.64 m |
+| corner radius at 60 km/h | 14.3 m |
+| corner radius at 90 km/h | 32.3 m |
+| corner radius at 120 km/h | 57.6 m |
+| yaw rate at 145 km/h, full lock | 17 deg/s (grip capped at 19 m/s^2) |
 | braking, 130 km/h to stop | 3.1 s |
 | wheel spin vs distance | spin delta == -distance / tyre radius, sign flips in reverse |
+
+The corner radii were 5.56 / 22.6 / 51.1 / 91.2 m before the grip cap went from 12 to
+19 m/s^2 and lock from 0.55 to 0.62 rad. Above walking pace the 12 m/s^2 cap was the
+binding constraint, not the steering geometry, which is why raising lock alone did nothing.
 
 ## Not built yet (plan milestones)
 
@@ -49,7 +83,17 @@ RACER.press('KeyW', true)
 RACER.place(x, z, yaw)
 RACER.freezeCam(x,y,z, tx,ty,tz)  // park the camera; releaseCam() to resume
 RACER.dbg()              // fps, mesh count, draw calls, triangles
+RACER.scene()            // live Scene, for checking what actually loaded
+RACER.engine()           // live Engine
 ```
 
 `requestAnimationFrame` does not fire in a headless harness, so `sim()` is the only way to
 test physics there. Keep it in the shipped file.
+
+## Capture notes
+
+`node scripts/shot.mjs --port 5199 --page "" --out out/x.png` drives Windows Chrome. It
+needs the tab brought to the front before the compositor produces a frame, so a capture
+that comes back as the flat clear colour means the frame chain had not started, not that
+the scene is empty. `node scripts/probe.mjs <url> <waitMs>` prints console errors and what
+loaded, which is the cheaper check.

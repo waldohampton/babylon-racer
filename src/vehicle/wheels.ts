@@ -1,13 +1,14 @@
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
-import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import { Color3 } from "@babylonjs/core/Maths/math.color";
+import type { Mesh } from "@babylonjs/core/Meshes/mesh";
+import type { Material } from "@babylonjs/core/Materials/material";
 import type { Scene } from "@babylonjs/core/scene";
 import { TUNE } from "../core/config";
 
 export interface WheelRig {
   pivot: TransformNode; // holds steer (rotation.y)
   spin: TransformNode; // holds roll (rotation.x)
+  mesh: Mesh; // the tyre itself, so it can cast a shadow
   front: boolean;
 }
 
@@ -16,11 +17,7 @@ export interface WheelRig {
  * The cylinder's own axis is Y, so it is rotated 90 deg on Z once, inside the
  * spin node; that keeps roll on a clean single axis.
  */
-export function buildWheels(scene: Scene, root: TransformNode, r: number): WheelRig[] {
-  const mat = new StandardMaterial("tyre", scene);
-  mat.diffuseColor = new Color3(0.09, 0.09, 0.1);
-  mat.specularColor = new Color3(0.15, 0.15, 0.15);
-
+export function buildWheels(scene: Scene, root: TransformNode, r: number, mat: Material): WheelRig[] {
   const halfTrack = 0.88;
   const halfBase = TUNE.wheelbase / 2;
   const out: WheelRig[] = [];
@@ -44,7 +41,7 @@ export function buildWheels(scene: Scene, root: TransformNode, r: number): Wheel
       mesh.material = mat;
       mesh.parent = spin;
 
-      out.push({ pivot, spin, front });
+      out.push({ pivot, spin, mesh, front });
     }
   }
   return out;

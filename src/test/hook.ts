@@ -58,5 +58,8 @@ export function installHook(d: Deps) {
       calls: (window as any).__calls,
       tris: (window as any).__tris,
     }),
+    /** live handles, so a session can inspect what actually loaded */
+    scene: () => d.scene,
+    engine: () => d.engine,
   };
 }

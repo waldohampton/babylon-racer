@@ -9,10 +9,12 @@ export const TUNE = {
   hullHalfLen: 1.15, // circle offset, NOT half the length: 2*1.15 + 2*0.95 = 4.2 m
   tyreRadius: 0.366,
 
-  // steering
-  maxSteer: 0.55, // rad, ~31 deg
-  steerRate: 2.6, // rad/s toward target
-  steerReturn: 3.2, // rad/s self-centre
+  // steering. Lock was 0.55 / 2.6 / 3.2 and the car asked for tighter turns:
+  // 35 deg of lock is a 3.6 m turning circle on the geometry, and the rate is
+  // up so full lock arrives in 0.16 s instead of 0.24 s.
+  maxSteer: 0.62, // rad, ~35.5 deg
+  steerRate: 4.0, // rad/s toward target
+  steerReturn: 4.6, // rad/s self-centre
 
   // drive
   engineAccel: 8.0, // m/s^2 at rest, tapers with a power curve
@@ -25,9 +27,11 @@ export const TUNE = {
   rollResist: 0.4,
 
   // grip: yaw rate is capped by lateral acceleration, so full lock at speed
-  // means understeer instead of a spin. 12 m/s^2 ~ 1.2 g.
-  latAccelMax: 12.0,
-  gripBleed: 9.0, // lateral velocity bleed per second
+  // means understeer instead of a spin. 12 m/s^2 ~ 1.2 g was binding at every
+  // speed and is what made the car feel like it would not turn. 19 ~ 1.9 g is
+  // a slick-tyred race car and roughly halves the corner radius.
+  latAccelMax: 19.0,
+  gripBleed: 11.0, // lateral velocity bleed per second
   handbrakeGrip: 1.6,
 
   chase: {
