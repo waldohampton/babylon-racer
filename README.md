@@ -49,6 +49,40 @@ Every surface is a real asset with a measured size, not a colour picked by eye.
 
 Total added: 11 MB of textures plus a 1.2 MB HDR, all CC0.
 
+## Mobile
+
+`src/core/quality.ts` picks a tier at boot: a coarse pointer *and* a screen under
+820 px gets the low tier. `?q=low` / `?q=high` forces one for testing.
+
+| | high (desktop) | low (phone) |
+|---|---|---|
+| device pixel ratio cap | 2 | 2 |
+| ground albedo / normal | 4k / 2k | 1k / 1k |
+| car maps | 2k, in the stock GLB | 1k, `muscle-grab3d-1k.glb` |
+| shadow map | 2048, blur 24 | 1024, blur 16 |
+| clear coat on paint | on | off |
+| ground plane / fog | 600 m / 0.0024 | 400 m / 0.006 |
+
+Measured at 390x844, DPR 3, touch emulated: backing store 780x1688 (2x; it was
+1x before, which meant a 3x phone rendered at a third of its pixels), 1k ground,
+1024 shadow, clear coat off, 1k car maps, no console errors. Desktop stays on 4k
+ground, 600 m plane, 2048 shadow, clear coat on, 2k car maps.
+
+Touch controls: stick bottom-left (up is throttle, down is brake, sideways is
+steer, 0.14 dead zone per axis), handbrake bottom-right, both anchored to
+`env(safe-area-inset-*)` and hidden until the first real `touchstart`, so a
+touchscreen laptop stays on keys. They write into `Input.touch`, which the
+keyboard path merges in `tick()`, so physics still reads one struct.
+
+`python3 scripts/make_mobile_glb.py in.glb out.glb 1024 82` rebuilds a GLB with
+smaller embedded textures, rewriting every buffer offset with 4 byte alignment.
+The stock car's five 2k maps are about 80 MB of GPU memory decompressed; the 1k
+rebuild is 0.88 MB on disk against 1.26.
+
+Not measured: real phone frame rate. The only renderer available here is a
+software rasterizer, so the tier was sized by texture and buffer budgets, not by
+an fps reading on a device.
+
 ## Measured, not estimated
 
 | test | result |

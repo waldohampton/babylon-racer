@@ -14,9 +14,11 @@ import { buildWheels, spinWheels } from "./vehicle/wheels";
 import { ChaseCamera } from "./camera/chase";
 import { installHook } from "./test/hook";
 import { loadCarModel, type CarModel } from "./vehicle/model";
+import { asset } from "./core/assets";
+import { pickTier } from "./core/quality";
+import { installTouchControls } from "./core/touch";
 import {
-  SCANS,
-  asset,
+  TILE,
   scannedMaterial,
   paintMaterial,
   rubberMaterial,
@@ -24,10 +26,16 @@ import {
   installSky,
   installSunShadows,
   applyGrade,
+  type ScanSet,
 } from "./render/look";
 
 const canvas = document.getElementById("c") as HTMLCanvasElement;
-const engine = new Engine(canvas, true, { stencil: true, preserveDrawingBuffer: true });
+const tier = pickTier();
+
+const engine = new Engine(canvas, true, { stencil: true, preserveDrawingBuffer: true }, true);
+// adaptToDeviceRatio handles a retina screen; the cap stops a 3x phone paying
+// 2.25x the fragments of 2x for something nobody can see on a 6 inch screen
+engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio || 1, tier.dprCap));
 const scene = new Scene(engine);
 scene.clearColor = new Color4(0.35, 0.45, 0.58, 1);
 
@@ -47,17 +55,23 @@ sun.diffuse = new Color3(1.0, 0.96, 0.9);
 // moved with the car every frame (see the render observer below)
 const SUN_FRAME_OFFSET = SUN_DIR.scale(-50);
 
-// distance haze, so a 600 m plane has no visible edge
+// distance haze, so the plane has no visible edge (400 m on the phone tier)
 scene.fogMode = Scene.FOGMODE_EXP2;
-scene.fogDensity = 0.0024;
+scene.fogDensity = tier.fogDensity;
 scene.fogColor = new Color3(0.63, 0.66, 0.7);
 
 // --- world (M0 placeholder: flat scanned ground, no track yet) -----------
-const ground = MeshBuilder.CreateGround("ground", { width: 600, height: 600 }, scene);
-ground.material = scannedMaterial(scene, "sand", SCANS.sand.set, SCANS.sand.tileMetres, 600);
+const ground = MeshBuilder.CreateGround("ground", { width: tier.planeSize, height: tier.planeSize }, scene);
+const sandSet: ScanSet = { albedo: tier.groundAlbedo, normal: tier.groundNormal, arm: asset("tex/ground_sand_arm.jpg") };
+ground.material = scannedMaterial(scene, "sand", sandSet, TILE.sand, tier.planeSize);
 
 // reference blocks so motion is readable before the track exists
-const blockMat = scannedMaterial(scene, "concrete", SCANS.concrete.set, SCANS.concrete.tileMetres, 6);
+const concreteSet: ScanSet = {
+  albedo: asset("tex/block_concrete_diff.jpg"),
+  normal: asset("tex/block_concrete_nor.jpg"),
+  arm: asset("tex/block_concrete_arm.jpg"),
+};
+const blockMat = scannedMaterial(scene, "concrete", concreteSet, TILE.concrete, 6);
 const blocks = [];
 for (let i = 0; i < 12; i++) {
   const b = MeshBuilder.CreateBox("ref" + i, { width: 6, height: 6 + (i % 3) * 4, depth: 6 }, scene);
@@ -73,7 +87,7 @@ const root = new TransformNode("carRoot", scene);
 
 const hull = MeshBuilder.CreateBox("hull", { width: 1.7, height: 0.62, depth: 4.2 }, scene);
 hull.position.y = 0.66;
-hull.material = paintMaterial(scene, "paint", new Color3(0.36, 0.04, 0.03));
+hull.material = paintMaterial(scene, "paint", new Color3(0.36, 0.04, 0.03), tier.clearCoat);
 hull.parent = root;
 
 const cabin = MeshBuilder.CreateBox("cabin", { width: 1.45, height: 0.52, depth: 1.9 }, scene);
@@ -88,12 +102,14 @@ const shadows = installSunShadows(
   sun,
   [hull, cabin, ...wheels.map((w) => w.mesh), ...blocks],
   [ground, ...blocks],
+  tier.shadowSize,
+  tier.shadowBlur,
 );
 
 // the real body replaces the boxes once it has loaded; the boxes stay as the
 // fallback if the asset 404s, and physics does not care either way
 let model: CarModel | null = null;
-loadCarModel(scene, root, shadows, () => {
+loadCarModel(scene, root, shadows, tier.carModel, tier.clearCoat, () => {
   hull.setEnabled(false);
   cabin.setEnabled(false);
   for (const w of wheels) w.pivot.setEnabled(false);
@@ -105,6 +121,7 @@ applyGrade(scene, 1.0);
 
 const cam = new ChaseCamera(scene, new UniversalCamera("cam", new Vector3(0, 3, -8), scene));
 const input = new Input();
+installTouchControls(input);
 
 let simTime = 0;
 let paused = false;

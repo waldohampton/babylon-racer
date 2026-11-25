@@ -11,7 +11,7 @@ import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
 import type { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
-import { asset } from "../render/look";
+import { asset } from "../core/assets";
 
 export interface CarModel {
   root: TransformNode;
@@ -26,11 +26,13 @@ export async function loadCarModel(
   scene: Scene,
   parent: TransformNode,
   shadows: ShadowGenerator,
+  url: string,
+  clearCoat: boolean,
   onReady: () => void,
 ): Promise<CarModel | null> {
   let result;
   try {
-    result = await ImportMeshAsync(asset("assets/car/muscle-grab3d.glb"), scene);
+    result = await ImportMeshAsync(url, scene);
   } catch (e) {
     console.warn("car model failed, placeholder stays", e);
     return null;
@@ -63,7 +65,7 @@ export async function loadCarModel(
       // black paint with a clear coat: without the coat a black body is the one
       // surface with no readable shape, because it only shows what it reflects
       if (mat.albedoTexture) mat.albedoTexture = blackPaint;
-      if (mat.clearCoat) {
+      if (clearCoat && mat.clearCoat) {
         mat.clearCoat.isEnabled = true;
         mat.clearCoat.intensity = 0.9;
         mat.clearCoat.roughness = 0.1;

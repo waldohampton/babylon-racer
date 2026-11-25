@@ -13,6 +13,10 @@ export class Input {
   private keys = new Set<string>();
   private resetRequested = false;
 
+  // written by the touch stick and the handbrake button, merged in tick()
+  touch: InputState = empty();
+  touchActive = false;
+
   constructor() {
     window.addEventListener("keydown", (e) => {
       if (e.repeat) return;
@@ -56,5 +60,13 @@ export class Input {
     this.state.brake = ramp(this.state.brake, back ? 1 : 0);
     this.state.steer = ramp(this.state.steer, (right ? 1 : 0) - (left ? 1 : 0));
     this.state.handbrake = k.has("Space");
+
+    // a stick is analog: it writes over the ramp instead of being ramped
+    if (this.touchActive) {
+      this.state.throttle = Math.max(0, Math.min(1, this.touch.throttle));
+      this.state.brake = Math.max(0, Math.min(1, this.touch.brake));
+      this.state.steer = Math.max(-1, Math.min(1, this.touch.steer));
+      this.state.handbrake = this.state.handbrake || this.touch.handbrake;
+    }
   }
 }

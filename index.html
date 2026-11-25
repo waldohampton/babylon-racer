@@ -18,11 +18,56 @@
         position: fixed; inset: 0; display: none; padding: 24px;
         font: 14px/1.5 ui-monospace, monospace; color: #ffd7d7; background: #2a1114; white-space: pre-wrap;
       }
+
+      /* touch controls: nothing is shown until a finger actually touches the
+         glass, so a desktop with a touchscreen never sees them */
+      #touch { position: fixed; inset: 0; pointer-events: none; }
+      #touch[hidden] { display: none; }
+      #stick {
+        position: absolute; pointer-events: auto;
+        left: calc(18px + env(safe-area-inset-left));
+        bottom: calc(24px + env(safe-area-inset-bottom));
+        width: 118px; height: 118px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(255,255,255,.10), rgba(255,255,255,.04) 62%, rgba(255,255,255,.02));
+        border: 1px solid rgba(255,255,255,.22);
+        touch-action: none; user-select: none; -webkit-user-select: none;
+        display: grid; place-items: center;
+      }
+      #stick.live { border-color: rgba(255,196,80,.85); background: radial-gradient(circle, rgba(255,196,80,.16), rgba(255,255,255,.04) 62%); }
+      #knob {
+        width: 54px; height: 54px; border-radius: 50%;
+        background: rgba(238,242,246,.82);
+        box-shadow: 0 2px 12px rgba(0,0,0,.45);
+        will-change: transform;
+      }
+      #hb {
+        position: absolute; pointer-events: auto;
+        right: calc(20px + env(safe-area-inset-right));
+        bottom: calc(28px + env(safe-area-inset-bottom));
+        width: 96px; height: 96px; border-radius: 50%;
+        border: 1px solid rgba(255,255,255,.24);
+        background: rgba(255,255,255,.06); color: #eef2f6;
+        font: 600 12px/1 ui-monospace, monospace; letter-spacing: .1em;
+        touch-action: none; user-select: none; -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #hb.on { background: rgba(255,96,80,.55); border-color: rgba(255,140,120,.9); }
+
+      /* the hands live at the bottom of a phone, so the readout moves up there */
+      body.touch #hud {
+        top: calc(14px + env(safe-area-inset-top));
+        bottom: auto; right: 16px; font-size: 30px;
+      }
+      body.touch #hud small { font-size: 11px; }
     </style>
   </head>
   <body>
     <canvas id="c"></canvas>
     <div id="hud"><span id="spd">0</span><small>KM/H · <span id="gear">N</span></small></div>
+    <div id="touch" hidden>
+      <div id="stick"><div id="knob"></div></div>
+      <button id="hb" type="button" aria-label="handbrake">BRAKE</button>
+    </div>
     <pre id="err"></pre>
     <script>
       window.addEventListener("error", (e) => {

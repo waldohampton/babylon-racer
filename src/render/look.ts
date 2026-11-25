@@ -18,23 +18,10 @@ export interface ScanSet {
   arm: string; // R = ambient occlusion, G = roughness, B = metallic
 }
 
-/**
- * Asset URL under the build's base path. Vite dev serves from `/`, GitHub
- * Pages serves from `/babylon-racer/`, and a hardcoded leading slash breaks the
- * second one.
- */
-export const asset = (p: string) => import.meta.env.BASE_URL + p.replace(/^\//, "");
-
-/** Where the assets live and how big the real scan is, in metres. */
-export const SCANS = {
-  sand: {
-    set: { albedo: asset("tex/ground_sand_diff.jpg"), normal: asset("tex/ground_sand_nor.jpg"), arm: asset("tex/ground_sand_arm.jpg") },
-    tileMetres: 150, // Poly Haven publishes 15000 cm for aerial_sand
-  },
-  concrete: {
-    set: { albedo: asset("tex/block_concrete_diff.jpg"), normal: asset("tex/block_concrete_nor.jpg"), arm: asset("tex/block_concrete_arm.jpg") },
-    tileMetres: 2.5, // brushed_concrete is 250 cm
-  },
+/** Real world size of each scan, in metres. Poly Haven publishes these. */
+export const TILE = {
+  sand: 150, // aerial_sand, 15000 cm
+  concrete: 2.5, // brushed_concrete, 250 cm
 };
 
 /**
@@ -71,15 +58,17 @@ export function scannedMaterial(scene: Scene, name: string, set: ScanSet, tileMe
 }
 
 /** Car paint: metallic flake base under a clear coat, so the sky reads on it. */
-export function paintMaterial(scene: Scene, name: string, colour: Color3): PBRMaterial {
+export function paintMaterial(scene: Scene, name: string, colour: Color3, clearCoat = true): PBRMaterial {
   const m = new PBRMaterial(name, scene);
   m.albedoColor = colour;
   m.metallic = 0.55;
   m.roughness = 0.34;
-  m.clearCoat.isEnabled = true;
-  m.clearCoat.intensity = 1.0;
-  m.clearCoat.roughness = 0.045;
-  m.clearCoat.indexOfRefraction = 1.5;
+  if (clearCoat) {
+    m.clearCoat.isEnabled = true;
+    m.clearCoat.intensity = 1.0;
+    m.clearCoat.roughness = 0.045;
+    m.clearCoat.indexOfRefraction = 1.5;
+  }
   return m;
 }
 
@@ -144,7 +133,14 @@ export function installSky(scene: Scene, url: string): HDRCubeTexture {
 }
 
 /** Sun with a real contact shadow. The blob under the car is gone; this replaces it. */
-export function installSunShadows(scene: Scene, sun: DirectionalLight, casters: Mesh[], receivers: Mesh[]): ShadowGenerator {
+export function installSunShadows(
+  scene: Scene,
+  sun: DirectionalLight,
+  casters: Mesh[],
+  receivers: Mesh[],
+  size = 2048,
+  blur = 24,
+): ShadowGenerator {
   // The frustum is pinned to a 70 m box that follows the car (main.ts moves
   // the light). Left on auto it fits every caster in the scene, the blocks sit
   // 60 m out, and the car's shadow lands on about four texels.
@@ -157,9 +153,9 @@ export function installSunShadows(scene: Scene, sun: DirectionalLight, casters: 
   sun.shadowMinZ = 1;
   sun.shadowMaxZ = 120;
 
-  const sg = new ShadowGenerator(2048, sun);
+  const sg = new ShadowGenerator(size, sun);
   sg.useBlurExponentialShadowMap = true;
-  sg.blurKernel = 24;
+  sg.blurKernel = blur;
   sg.depthScale = 60;
   sg.bias = 0.0006;
   sg.setDarkness(0.25); // 0 = pitch black shadow, 1 = no shadow
