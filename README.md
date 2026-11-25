@@ -55,17 +55,19 @@ Total added: 11 MB of textures plus a 1.2 MB HDR, all CC0.
 |---|---|
 | 0-100 km/h | 4.17 s |
 | top speed, 10 s flat out | 145 km/h |
-| corner radius at 30 km/h, full lock | 3.64 m |
-| corner radius at 60 km/h | 14.3 m |
-| corner radius at 90 km/h | 32.3 m |
-| corner radius at 120 km/h | 57.6 m |
-| yaw rate at 145 km/h, full lock | 17 deg/s (grip capped at 19 m/s^2) |
+| corner radius at 30 km/h, full lock | 2.96 m |
+| corner radius at 60 km/h | 10.5 m |
+| corner radius at 90 km/h | 23.6 m |
+| corner radius at 120 km/h | 42.1 m |
+| yaw rate at 145 km/h, full lock | 17 deg/s (grip capped at 26 m/s^2) |
 | braking, 130 km/h to stop | 3.1 s |
 | wheel spin vs distance | spin delta == -distance / tyre radius, sign flips in reverse |
 
-The corner radii were 5.56 / 22.6 / 51.1 / 91.2 m before the grip cap went from 12 to
-19 m/s^2 and lock from 0.55 to 0.62 rad. Above walking pace the 12 m/s^2 cap was the
-binding constraint, not the steering geometry, which is why raising lock alone did nothing.
+The corner radii started at 5.56 / 22.6 / 51.1 / 91.2 m with a 12 m/s^2 grip cap and
+0.55 rad of lock. Above walking pace that cap was the binding constraint, not the steering
+geometry, which is why raising lock alone did nothing. 26 m/s^2 and 0.72 rad of lock put
+them at 2.96 / 10.5 / 23.6 / 42.1 m. Full lock at 145 km/h holds speed with no lateral
+slip and no oscillation, so the tighter numbers are stable, just arcade.
 
 ## Not built yet (plan milestones)
 
