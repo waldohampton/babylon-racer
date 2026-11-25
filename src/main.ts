@@ -16,6 +16,7 @@ import { installHook } from "./test/hook";
 import { loadCarModel, type CarModel } from "./vehicle/model";
 import {
   SCANS,
+  asset,
   scannedMaterial,
   paintMaterial,
   rubberMaterial,
@@ -34,7 +35,7 @@ scene.clearColor = new Color4(0.35, 0.45, 0.58, 1);
 // A photographed sky is both the background and the PBR light probe. No
 // hemispheric cheat light: the HDRI is the ambient, which is why paint and
 // sand stop looking like flat plastic.
-installSky(scene, "/hdri/clear_1k.hdr");
+installSky(scene, asset("hdri/clear_1k.hdr"));
 
 // Sun over the driver's left shoulder: the faces the chase cam sees are lit
 // and the shadow falls away to screen right instead of hiding under the car.

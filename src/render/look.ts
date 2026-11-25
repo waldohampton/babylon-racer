@@ -18,14 +18,21 @@ export interface ScanSet {
   arm: string; // R = ambient occlusion, G = roughness, B = metallic
 }
 
+/**
+ * Asset URL under the build's base path. Vite dev serves from `/`, GitHub
+ * Pages serves from `/babylon-racer/`, and a hardcoded leading slash breaks the
+ * second one.
+ */
+export const asset = (p: string) => import.meta.env.BASE_URL + p.replace(/^\//, "");
+
 /** Where the assets live and how big the real scan is, in metres. */
 export const SCANS = {
   sand: {
-    set: { albedo: "/tex/ground_sand_diff.jpg", normal: "/tex/ground_sand_nor.jpg", arm: "/tex/ground_sand_arm.jpg" },
+    set: { albedo: asset("tex/ground_sand_diff.jpg"), normal: asset("tex/ground_sand_nor.jpg"), arm: asset("tex/ground_sand_arm.jpg") },
     tileMetres: 150, // Poly Haven publishes 15000 cm for aerial_sand
   },
   concrete: {
-    set: { albedo: "/tex/block_concrete_diff.jpg", normal: "/tex/block_concrete_nor.jpg", arm: "/tex/block_concrete_arm.jpg" },
+    set: { albedo: asset("tex/block_concrete_diff.jpg"), normal: asset("tex/block_concrete_nor.jpg"), arm: asset("tex/block_concrete_arm.jpg") },
     tileMetres: 2.5, // brushed_concrete is 250 cm
   },
 };

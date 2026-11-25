@@ -11,6 +11,7 @@ import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
 import type { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
+import { asset } from "../render/look";
 
 export interface CarModel {
   root: TransformNode;
@@ -29,7 +30,7 @@ export async function loadCarModel(
 ): Promise<CarModel | null> {
   let result;
   try {
-    result = await ImportMeshAsync("/assets/car/muscle-grab3d.glb", scene);
+    result = await ImportMeshAsync(asset("assets/car/muscle-grab3d.glb"), scene);
   } catch (e) {
     console.warn("car model failed, placeholder stays", e);
     return null;
@@ -45,7 +46,7 @@ export async function loadCarModel(
   root.position.y -= bounds.min.y;
 
   const wheels: CarModel["wheels"] = [];
-  const blackPaint = new Texture("/assets/car/body_basecolor_black.jpg", scene);
+  const blackPaint = new Texture(asset("assets/car/body_basecolor_black.jpg"), scene);
   blackPaint.gammaSpace = true;
   blackPaint.anisotropicFilteringLevel = 4;
 
