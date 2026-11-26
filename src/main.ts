@@ -154,7 +154,10 @@ function fixedStep(dt: number) {
   root.rotation.y = s.yaw;
   spinWheels(wheels, s.wheelSpin, s.steer);
   // the model's wheels roll the other way round from our accumulator sign
-  if (model) model.spin(-s.wheelSpin);
+  if (model) {
+    model.spin(-s.wheelSpin);
+    model.steer(s.steer);
+  }
   simTime += dt;
 }
 
@@ -171,7 +174,10 @@ function renderPose() {
   root.position.set(x, 0, z);
   root.rotation.y = yaw;
   spinWheels(wheels, spin, car.state().steer);
-  if (model) model.spin(-spin);
+  if (model) {
+    model.spin(-spin);
+    model.steer(car.state().steer); // input, not physics: no need to interpolate
+  }
   return { x, z, yaw };
 }
 

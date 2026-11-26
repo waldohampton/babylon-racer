@@ -107,6 +107,7 @@ slow motion.
 | yaw rate at 145 km/h, full lock | 17 deg/s (grip capped at 26 m/s^2) |
 | braking, 130 km/h to stop | 3.1 s |
 | wheel spin vs distance | spin delta == -distance / tyre radius, sign flips in reverse |
+| front wheel steer angle | 41.3 deg right at full lock, -41.3 left, rear wheels 0 |
 
 The corner radii started at 5.56 / 22.6 / 51.1 / 91.2 m with a 12 m/s^2 grip cap and
 0.55 rad of lock. Above walking pace that cap was the binding constraint, not the steering

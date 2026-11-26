@@ -17,6 +17,7 @@ export interface CarModel {
   root: TransformNode;
   wheels: { node: AbstractMesh; base: Quaternion }[];
   spin: (radians: number) => void;
+  steer: (radians: number) => void;
 }
 
 /** nose orientation of the asset in our world: +Z is the car's forward */
@@ -84,6 +85,23 @@ export async function loadCarModel(
     for (const w of wheels) w.node.rotationQuaternion = w.base.multiply(q);
   };
 
+  // Steering lives on the wheel PIVOT nodes, not on the spinning meshes: the
+  // pivot yaws about the car's up axis, the children keep rolling on their own
+  // axle underneath it, which is exactly what a steered wheel does.
+  const up = new Vector3(0, 1, 0);
+  const pivots = result.transformNodes ?? [];
+  const fronts = pivots.filter((n) => /wheel_f[lr]$/i.test(n.name));
+  const backs = pivots.filter((n) => /wheel_r[lr]$/i.test(n.name));
+  const steer = (radians: number) => {
+    // negative: measured against the car, a positive yaw on these pivots points
+    // the wheels left, while positive physics steer means right. The asset's
+    // pivot frames are flipped relative to our +Z nose.
+    const q = Quaternion.RotationAxis(up, -radians);
+    for (const n of fronts) n.rotationQuaternion = q.clone();
+    if (!fronts.length) return;
+    for (const n of backs) if (!n.rotationQuaternion) n.rotationQuaternion = Quaternion.Identity();
+  };
+
   onReady();
-  return { root, wheels, spin };
+  return { root, wheels, spin, steer };
 }
