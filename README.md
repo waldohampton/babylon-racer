@@ -94,6 +94,39 @@ dropped instead of banked: a growing accumulator pins the interpolation factor
 at 1, which silently disables the interpolation and puts the game in permanent
 slow motion.
 
+## Drifting
+
+Pull the handbrake (Space, or the BRAKE button on touch) and the rear breaks
+away. The physics has two regimes:
+
+- **Grip.** Sideways speed is deleted and the velocity is rebuilt on the new
+  heading, so a corner costs nothing. That is not physical, it is the arcade lie
+  the car was tuned around, and the corner radii below depend on it.
+- **Slide.** The velocity keeps pointing where it pointed and the body rotates
+  around its own momentum. Grip becomes a budget: the tyres claw back at most
+  `handbrakeLatAccel` (7 m/s^2, against 26 gripping) metres per second of
+  sideways speed per second, and the rest is the drift. Throttle keeps the rear
+  broken away at 8 m/s^2, so releasing the handbrake does not hook the car up
+  instantly. The slide ends when the body and the path come within 3 deg.
+
+While sliding, the steering asks for a drift **angle**, not a yaw rate: full
+lock one way asks for 48.7 deg, countersteer asks for none, and the body is
+driven toward that angle at up to 1.4 rad/s. Free yaw rate was tried first and
+every slide either died in half a second or spun the car, with no window in
+between; measured 43 to 46 deg held for six seconds with the angle controller.
+
+The camera aims at the direction of travel, weighted by slip, instead of at the
+body. Gripping, the two are identical; drifting, the car stays visible at an
+angle rather than pointing dead away from the lens.
+
+Scoring (`src/core/score.ts`) follows the numbers shipped drift games converged
+on: 12 to 75 deg of slip, at least 29 km/h, points per second of
+`speed * (angle/45)^1.2 * 10`, a multiplier climbing 0.5 every 1.5 s held to
+x10, banked when you straighten up for 0.6 s. Banked points are never taken
+away, only the live chain is at risk. Circling slowly in one direction stops
+paying after a turn and a quarter, but that guard only applies below 65 km/h so
+a long fast drift does not trip it.
+
 ## Measured, not estimated
 
 | test | result |
@@ -108,6 +141,10 @@ slow motion.
 | braking, 130 km/h to stop | 3.1 s |
 | wheel spin vs distance | spin delta == -distance / tyre radius, sign flips in reverse |
 | front wheel steer angle | 41.3 deg right at full lock, -41.3 left, rear wheels 0 |
+| drift angle, held | 43 to 46 deg for 6 s at 70 and 90 km/h entry |
+| drift speed bleed | 72 to 48 km/h across that 6 s drift, throttle down |
+| points at 45 deg, 20 m/s | 200/s before the multiplier, so a 6 s chain reached 980 at x3 |
+| donut, handbrake held 20 s | pays until the slide drops it under 29 km/h, then stops |
 
 The corner radii started at 5.56 / 22.6 / 51.1 / 91.2 m with a 12 m/s^2 grip cap and
 0.55 rad of lock. Above walking pace that cap was the binding constraint, not the steering

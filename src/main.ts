@@ -9,6 +9,7 @@ import { UniversalCamera } from "@babylonjs/core/Cameras/universalCamera";
 
 import { TUNE } from "./core/config";
 import { Input } from "./core/input";
+import { DriftScore } from "./core/score";
 import { BicycleVehicle } from "./vehicle/bicycle";
 import { buildWheels, spinWheels } from "./vehicle/wheels";
 import { ChaseCamera } from "./camera/chase";
@@ -158,6 +159,7 @@ function fixedStep(dt: number) {
     model.spin(-s.wheelSpin);
     model.steer(s.steer);
   }
+  score.step(dt, { speed: s.speed, forwardSpeed: s.forwardSpeed, slip: s.slip, yaw: s.yaw });
   simTime += dt;
 }
 
@@ -207,6 +209,12 @@ function advance(realDt: number) {
 
 const hudSpeed = document.getElementById("spd") as HTMLElement;
 const hudGear = document.getElementById("gear") as HTMLElement;
+const hudPts = document.getElementById("pts") as HTMLElement;
+const hudChain = document.getElementById("chain") as HTMLElement;
+const hudChPts = document.getElementById("ch") as HTMLElement;
+const hudMul = document.getElementById("mul") as HTMLElement;
+const hudSlip = document.getElementById("slip") as HTMLElement;
+const score = new DriftScore();
 
 scene.onBeforeRenderObservable.add(() => {
   const dt = engine.getDeltaTime() / 1000;
@@ -218,6 +226,14 @@ scene.onBeforeRenderObservable.add(() => {
   const kmh = Math.round(Math.abs(s.forwardSpeed) * 3.6);
   hudSpeed.textContent = String(kmh);
   hudGear.textContent = s.forwardSpeed < -0.3 ? "R" : kmh < 1 ? "N" : "D";
+
+  const sc = score.readout();
+  hudPts.textContent = String(sc.total);
+  hudChPts.textContent = String(sc.pending);
+  hudMul.textContent = sc.mult.toFixed(1);
+  hudSlip.textContent = sc.slipDeg >= 4 ? `${sc.slipDeg}°` : "";
+  hudChain.classList.toggle("live", sc.drifting && sc.pending > 0);
+  hudChain.classList.toggle("banks", !sc.drifting && sc.pending === 0 && sc.lastBank > 0);
   cam.update({ ...s, x: pose.x, z: pose.z, yaw: pose.yaw }, root, dt);
   // keep the 70 m shadow box on the car
   sun.position.copyFromFloats(pose.x + SUN_FRAME_OFFSET.x, SUN_FRAME_OFFSET.y, pose.z + SUN_FRAME_OFFSET.z);
@@ -251,4 +267,4 @@ engine.runRenderLoop(() => {
 });
 window.addEventListener("resize", () => engine.resize());
 
-installHook({ engine, scene, car, root, cam, input, fixedStep, setPaused: (p: boolean) => { paused = p; }, resync: resyncPose });
+installHook({ engine, scene, car, root, cam, input, fixedStep, setPaused: (p: boolean) => { paused = p; }, resync: resyncPose, score });

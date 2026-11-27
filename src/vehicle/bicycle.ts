@@ -19,6 +19,8 @@ export class BicycleVehicle implements VehicleDriver {
   private vz = 0;
   private steer = 0;
   private spin = 0;
+  /** true while the rear tyres are broken away and the car is sliding */
+  private sliding = false;
 
   constructor(x = 0, z = 0, yaw = 0) {
     this.x = x;
@@ -54,8 +56,8 @@ export class BicycleVehicle implements VehicleDriver {
     this.steer += dSteer;
 
     // --- split world velocity into the car's own frame ---
-    let sin = Math.sin(this.yaw);
-    let cos = Math.cos(this.yaw);
+    const sin = Math.sin(this.yaw);
+    const cos = Math.cos(this.yaw);
     let vF = this.vx * sin + this.vz * cos; // signed forward
     let vL = this.vx * cos - this.vz * sin; // lateral
 
@@ -80,26 +82,66 @@ export class BicycleVehicle implements VehicleDriver {
     const roll = Math.sign(vF) * Math.min(Math.abs(vF), T.rollResist * dt);
     vF -= drag + roll;
 
-    // --- lateral grip: exponential bleed, stable at any dt ---
-    const grip = input.handbrake ? T.handbrakeGrip : T.gripBleed;
-    vL *= Math.exp(-grip * dt);
+    // --- lateral grip: two regimes ---
+    // GRIP. The nose wins: sideways speed is simply deleted and the velocity is
+    // rebuilt on the new heading, so a corner costs nothing. That is not
+    // physical, it is the arcade lie the car has been tuned around, and the
+    // measured corner radii depend on it.
+    //
+    // SLIDE. Once the rear is broken away the velocity keeps pointing where it
+    // pointed and the body rotates around its own momentum. Grip then becomes a
+    // budget: the tyres claw back at most latAccel metres per second of sideways
+    // speed per second, and the rest is the drift.
+    const slipNow = Math.abs(Math.atan2(vL, Math.max(Math.abs(vF), 0.5))) * (180 / Math.PI);
+    if (input.handbrake) this.sliding = true;
+    else if (this.sliding && slipNow < T.reGripSlip) this.sliding = false;
 
-    // --- heading (bicycle model, then grip-limited) ---
-    // Geometry alone lets full lock at 55 km/h spin the car like a top; real
-    // tyres cap lateral acceleration, so clamp the yaw rate to latAccelMax.
-    if (Math.abs(vF) > 0.05) {
-      const geometric = (vF / T.wheelbase) * Math.tan(this.steer);
-      const yawCap = T.latAccelMax / Math.max(Math.abs(vF), 3);
-      const yawRate = clamp(geometric, -yawCap, yawCap);
-      this.yaw += yawRate * dt;
+    if (this.sliding) {
+      // power oversteer: throttle keeps the rear spinning, so releasing the
+      // handbrake does not instantly hook the car back up
+      const budget = input.handbrake
+        ? T.handbrakeLatAccel
+        : input.throttle > 0.1
+          ? T.powerSlideGrip
+          : T.latAccelMax;
+      const maxKill = budget * dt;
+      vL -= clamp(vL, -maxKill, maxKill);
+
+      const dir = Math.sign(vF);
+      if (input.handbrake) vF -= dir * Math.min(Math.abs(vF), T.handbrakeDrag * dt);
+      vF -= dir * Math.min(Math.abs(vF), Math.abs(vL) * T.slideScrub * dt);
+
+      // rebuilt on the OLD heading: whatever slide the tyres could not kill
+      // keeps its direction in the world
+      this.vx = vF * sin + vL * cos;
+      this.vz = vF * cos - vL * sin;
+
+      if (Math.abs(vF) > 0.05) {
+        // Steering asks for a drift angle, not a yaw rate: full lock one way
+        // asks for the deepest slide, countersteer asks for none, and the body
+        // is driven toward the angle. Positive steer is right, which puts the
+        // tail out to the left, so the target angle is negative.
+        const target = -(this.steer / T.maxSteer) * T.maxDriftAngle;
+        const slipSigned = Math.atan2(vL, Math.max(Math.abs(vF), 0.5)) * (vF >= 0 ? 1 : -1);
+        // slip is (direction of travel - heading), so turning the body right
+        // DECREASES it: the rate chases the target with the opposite sign
+        const yawCap = input.handbrake ? T.handbrakeYawMax : T.driftYawMax;
+        const rate = clamp((slipSigned - target) * T.driftYawGain, -yawCap, yawCap);
+        this.yaw += rate * dt;
+      }
+    } else {
+      vL = 0;
+      if (Math.abs(vF) > 0.05) {
+        const geometric = (vF / T.wheelbase) * Math.tan(this.steer);
+        const yawCap = T.latAccelMax / Math.max(Math.abs(vF), 3);
+        this.yaw += clamp(geometric, -yawCap, yawCap) * dt;
+      }
+      // the nose wins: carry the speed round to the new heading
+      const s2 = Math.sin(this.yaw);
+      const c2 = Math.cos(this.yaw);
+      this.vx = vF * s2 + vL * c2;
+      this.vz = vF * c2 - vL * s2;
     }
-
-    // rebuild world velocity from the NEW heading so the car carries its
-    // momentum round the corner instead of snapping to a new direction
-    sin = Math.sin(this.yaw);
-    cos = Math.cos(this.yaw);
-    this.vx = vF * sin + vL * cos;
-    this.vz = vF * cos - vL * sin;
 
     this.x += this.vx * dt;
     this.z += this.vz * dt;
@@ -110,6 +152,10 @@ export class BicycleVehicle implements VehicleDriver {
   }
 
   state(): VehicleState {
+    const sin = Math.sin(this.yaw);
+    const cos = Math.cos(this.yaw);
+    const vF = this.vx * sin + this.vz * cos;
+    const vL = this.vx * cos - this.vz * sin;
     return {
       x: this.x,
       y: 0,
@@ -118,9 +164,12 @@ export class BicycleVehicle implements VehicleDriver {
       vx: this.vx,
       vz: this.vz,
       speed: Math.hypot(this.vx, this.vz),
-      forwardSpeed: this.vx * Math.sin(this.yaw) + this.vz * Math.cos(this.yaw),
+      forwardSpeed: vF,
       steer: this.steer,
       wheelSpin: this.spin,
+      // positive when the car's tail is sliding to its right: the body points
+      // further round the corner than the car is actually travelling
+      slip: Math.atan2(vL, Math.max(Math.abs(vF), 0.5)) * Math.sign(vF || 1),
     };
   }
 }

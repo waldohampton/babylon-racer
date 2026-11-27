@@ -37,9 +37,23 @@ export class ChaseCamera {
     if (this.frozen) return;
     const C = TUNE.chase;
 
-    // swing back behind the car after a moment at speed
+    // Aim the arm at the DIRECTION OF TRAVEL, not the body, weighted by how far
+    // the car is sideways. Gripping, the two are the same and nothing changes.
+    // Drifting, the camera stays over the path while the body angles away, which
+    // is the only way the slide is visible from behind.
+    let aim = v.yaw;
+    if (v.speed > 3 && v.forwardSpeed > 1) {
+      const travel = Math.atan2(v.vx, v.vz);
+      let d = travel - v.yaw;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      const w = Math.min(1, Math.abs(v.slip) / C.slideRef) * C.slideBlend;
+      aim = v.yaw + d * w;
+    }
+
+    // swing back behind that aim after a moment at speed
     if (v.speed > 1.5) {
-      const want = v.yaw;
+      const want = aim;
       let d = want - this.yaw;
       while (d > Math.PI) d -= Math.PI * 2;
       while (d < -Math.PI) d += Math.PI * 2;
@@ -47,7 +61,7 @@ export class ChaseCamera {
       this.yaw += clamp(d, -rate * dt, rate * dt);
     }
 
-    const ahead = new Vector3(Math.sin(v.yaw), 0, Math.cos(v.yaw));
+    const ahead = new Vector3(Math.sin(aim), 0, Math.cos(aim));
     // NOTE: +Z is the car's nose, so "behind" is minus the nose
     const armX = -Math.sin(this.yaw) * this.dist;
     const armZ = -Math.cos(this.yaw) * this.dist;

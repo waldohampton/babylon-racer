@@ -32,8 +32,28 @@ export const TUNE = {
   // enough; 26 ~ 2.6 g is arcade race car, roughly a third of the original
   // radius again.
   latAccelMax: 26.0,
-  gripBleed: 13.0, // lateral velocity bleed per second
-  handbrakeGrip: 1.6,
+  /**
+   * Lateral grip is a budget, not a bleed: the tyres can remove at most this
+   * much sideways speed per second. In grip driving the demand sits under the
+   * budget, so the car goes exactly where it points. Over the budget the rest
+   * stays as slide, and the body separates from its direction of travel.
+   */
+  handbrakeLatAccel: 7.0, // budget while the handbrake is held: 26 -> 7
+  handbrakeYawAccel: 32.0, // the rear steps out, so the body may turn faster
+  handbrakeYawMax: 1.15, // rad/s ceiling on that turn, or low speed spins
+  handbrakeDrag: 2.5, // m/s^2, the rear wheels are locked and dragging
+  slideScrub: 0.12, // forward m/s lost per m/s of sideways speed
+  reGripSlip: 3.0, // deg, below this the rear hooks back up
+  powerSlideGrip: 8.0, // lateral budget while sliding with throttle down
+  /**
+   * While sliding, the steering asks for a drift ANGLE rather than a yaw rate:
+   * full lock one way asks for maxDriftAngle, countersteer asks for none, and
+   * the body is driven toward that angle. A free yaw rate makes every slide
+   * either die in half a second or spin the car, with no window in between.
+   */
+  maxDriftAngle: 0.85, // rad, 48.7 deg at full lock
+  driftYawGain: 7.0, // 1/s, how hard it chases the target angle
+  driftYawMax: 1.4, // rad/s ceiling on the chase
 
   chase: {
     dist: 6.2,
@@ -47,5 +67,7 @@ export const TUNE = {
     armIn: 18,
     armOut: 6,
     swingIdle: 0.7,
+    slideBlend: 0.85, // how far the camera swings to the direction of travel
+    slideRef: 0.35, // rad of slip that reaches full swing
   },
 } as const;

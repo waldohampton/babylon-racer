@@ -17,6 +17,8 @@ interface Deps {
   setPaused: (p: boolean) => void;
   /** optional: drop the render interpolation onto the new pose after a teleport */
   resync?: () => void;
+  /** optional: drift score readout and reset, for headless checks */
+  score?: { readout: () => unknown; reset: () => void };
 }
 
 /**
@@ -64,5 +66,7 @@ export function installHook(d: Deps) {
     /** live handles, so a session can inspect what actually loaded */
     scene: () => d.scene,
     engine: () => d.engine,
+    score: () => d.score?.readout(),
+    resetScore: () => d.score?.reset(),
   };
 }

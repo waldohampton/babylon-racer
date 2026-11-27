@@ -11,6 +11,7 @@ export interface VehicleState {
   forwardSpeed: number; // signed
   steer: number; // rad, current
   wheelSpin: number; // accumulated rad, signed
+  slip: number; // rad, angle between heading and direction of travel
 }
 
 export interface VehicleDriver {
